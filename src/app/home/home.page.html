@@ -1,0 +1,531 @@
+
+<div class="fitflow-content">
+  <main class="app-shell">
+
+    <header class="topbar">
+      <div class="brand-copy">
+        <strong>Fit<span>Flow</span></strong>
+        <small>MOVE WITH PURPOSE</small>
+      </div>
+    </header>
+
+    <!-- WORKOUT TAB -->
+    <ng-container *ngIf="tab === 'home'">
+
+      <section class="hero">
+        <p class="kicker">YOUR PERSONAL TRAINING SPACE</p>
+        <h1>Build strength.<br><span>Find your flow.</span></h1>
+        <p class="muted">Small steps. Strong habits. Real progress.</p>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <strong>{{ completedWorkouts }}</strong>
+          <span>Workouts completed</span>
+        </article>
+
+        <article class="stat-card">
+          <strong>{{ totalTrainingMinutes }}</strong>
+          <span>Training minutes</span>
+        </article>
+      </section>
+
+      <!-- LOCATION -->
+      <section class="location-card">
+        <div class="location-heading">
+          <div class="location-icon">
+            <ion-icon name="location-outline"></ion-icon>
+          </div>
+          <div class="location-info">
+            <strong>My location</strong>
+            <small>{{ locationStatus }}</small>
+          </div>
+        </div>
+
+        <ng-container *ngIf="currentLocation as location">
+          <div class="location-name">
+            {{ locationName }}
+          </div>
+          <p class="location-description location-accuracy">
+            Accuracy: {{ location.coords.accuracy | number:'1.0-0' }} meters
+          </p>
+          <div class="location-distance" *ngIf="distanceFromPreviousLabel as distance; else noPreviousDistance">
+            <span>Distance from previous reading</span>
+            <strong>{{ distance }}</strong>
+          </div>
+          <ng-template #noPreviousDistance>
+            <p class="location-description location-accuracy">
+              Distance will appear after your next location reading.
+            </p>
+          </ng-template>
+        </ng-container>
+
+        <div class="location-map-frame">
+          <div #locationMap class="location-map" aria-label="Interactive map. Use plus and minus controls to zoom."></div>
+        </div>
+        <p class="map-attribution">Map data © OpenStreetMap contributors · Alternate tiles: HOT / OSM Germany · Place names by Photon</p>
+        <p class="map-status">{{ mapStatus }}</p>
+        <p class="map-instruction">Pan and zoom the map. Tap <strong>Get my location</strong> to center it on you.</p>
+
+        <button
+          type="button"
+          class="location-button"
+          (click)="getCurrentLocation()"
+          [disabled]="locationBusy"
+        >
+          <ion-icon [name]="locationBusy ? 'hourglass-outline' : 'locate-outline'"></ion-icon>
+          {{ locationBusy ? 'Finding location...' : currentLocation ? 'Refresh location' : 'Get my location' }}
+        </button>
+        <p class="location-description location-privacy">
+          GPS is used only when you tap this button. Coordinates are sent to map and place-name services. FitFlow saves only the previous point on this device to calculate straight-line distance; it does not continuously track your location.
+        </p>
+      </section>
+
+      <section class="section-title">
+        <div>
+          <p class="kicker">YOUR PLAN</p>
+          <h2>Workout builder</h2>
+        </div>
+        <span class="pill">{{ exercises.length }} exercises</span>
+      </section>
+
+      <button
+        type="button"
+        class="outline-action add-exercise-button"
+        (click)="addFormOpen ? cancelExerciseForm() : openAddExerciseForm()"
+      >
+        <ion-icon [name]="addFormOpen ? 'close-circle-outline' : 'add-circle-outline'"></ion-icon>
+        {{ addFormOpen ? 'Close form' : 'Add Exercise' }}
+      </button>
+
+      <section class="rest-setting">
+        <div>
+          <strong>Rest between exercises</strong>
+          <small>Recovery time after each movement</small>
+        </div>
+
+        <label class="seconds-input">
+          <input
+            type="number"
+            min="0"
+            max="600"
+            [(ngModel)]="restSeconds"
+            (change)="updateRest()"
+            placeholder="30"
+            aria-label="Rest seconds"
+          >
+          <span>SEC</span>
+        </label>
+      </section>
+
+      <div class="exercise-list">
+
+        <article
+          class="exercise-row"
+          *ngFor="let exercise of exercises; let i = index"
+        >
+          <div class="exercise-index">
+            {{ (i + 1).toString().padStart(2, '0') }}
+          </div>
+
+          <div class="exercise-copy">
+            <strong>{{ exercise.name }}</strong>
+            <small>
+              {{ exercise.category }} ·
+              {{ exercise.duration }} sec ·
+              {{ exercise.reps }} reps ·
+              {{ exercise.sets || 1 }} sets
+            </small>
+          </div>
+
+          <div class="exercise-actions">
+            <button
+              type="button"
+              class="row-action edit-action"
+              (click)="editExercise(exercise)"
+              [attr.aria-label]="'Edit ' + exercise.name"
+            >
+              <ion-icon name="create-outline"></ion-icon>
+              <span>Edit</span>
+            </button>
+
+            <button
+              type="button"
+              class="row-action delete-action"
+              [disabled]="!canEdit"
+              (click)="removeExercise(exercise.id)"
+              [attr.aria-label]="'Delete ' + exercise.name"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+              <span>Delete</span>
+            </button>
+          </div>
+        </article>
+
+        <div class="empty-state" *ngIf="!exercises.length">
+          <ion-icon name="barbell-outline"></ion-icon>
+          <strong>Your plan is empty</strong>
+          <span>Add an exercise to get started.</span>
+        </div>
+
+      </div>
+
+      <button
+        type="button"
+        class="start-button"
+        [disabled]="!exercises.length || !canEdit"
+        (click)="startWorkout()"
+      >
+        <ion-icon name="play"></ion-icon>
+        {{ exercises.length ? 'START WORKOUT' : 'ADD AN EXERCISE TO START' }}
+      </button>
+
+      <p class="privacy-note">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        Your plan and history stay on this device.
+      </p>
+
+    </ng-container>
+
+    <!-- TIMER TAB -->
+    <ng-container *ngIf="tab === 'timer'">
+
+      <section class="timer-page">
+
+        <button
+          class="back-link"
+          type="button"
+          *ngIf="phase === 'ready' || phase === 'done'"
+          (click)="resetWorkout()"
+        >
+          <ion-icon name="arrow-back"></ion-icon>
+          Back to plan
+        </button>
+
+        <p class="kicker">
+          {{
+            phase === 'rest'
+              ? 'RECOVERY TIME'
+              : phase === 'done'
+                ? 'SESSION FINISHED'
+                : phase === 'ready'
+                  ? 'READY WHEN YOU ARE'
+                  : 'WORKOUT IN PROGRESS'
+          }}
+        </p>
+
+        <div *ngIf="phase === 'ready'" class="timer-panel">
+
+          <h1>Ready to train?</h1>
+          <p>{{ workoutName }} · {{ exercises.length }} exercises</p>
+
+          <div class="ready-duration">{{ totalMinutesLabel }}</div>
+
+          <button
+            class="primary-button"
+            type="button"
+            (click)="startWorkout()"
+          >
+            Begin workout
+          </button>
+        </div>
+
+        <ng-container *ngIf="phase === 'work' || phase === 'rest'">
+
+          <div class="progress-info">
+            <span>SESSION PROGRESS</span>
+            <strong>{{ progress }}%</strong>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-value"
+              [style.width.%]="progress"
+            ></div>
+          </div>
+
+          <div class="timer-panel active-panel">
+
+            <small>
+              {{ phase === 'work' ? 'CURRENT EXERCISE' : 'TAKE A MOMENT' }}
+            </small>
+
+            <h2>
+              {{ phase === 'work' ? currentExercise?.name : 'Rest and recover' }}
+            </h2>
+
+            <div class="countdown">{{ formattedTime }}</div>
+
+            <p *ngIf="phase === 'work'">
+              {{ currentExercise?.reps }} target repetitions
+            </p>
+
+            <p *ngIf="phase === 'rest'">
+              Prepare for your next movement
+            </p>
+
+            <span class="set-count">
+              Exercise {{ currentIndex + 1 }} / {{ exercises.length }}
+              · Set {{ currentSet }}
+            </span>
+
+          </div>
+
+          <div class="timer-actions">
+            <button
+              class="primary-button"
+              type="button"
+              (click)="togglePause()"
+            >
+              <ion-icon [name]="paused ? 'play' : 'pause'"></ion-icon>
+              {{ paused ? 'Resume' : 'Pause' }}
+            </button>
+
+            <button
+              class="secondary-button"
+              type="button"
+              (click)="skipPhase()"
+            >
+              <ion-icon name="play-skip-forward"></ion-icon>
+              Skip
+            </button>
+          </div>
+
+          <p class="paused-note" *ngIf="paused">
+            <ion-icon name="pause-circle-outline"></ion-icon>
+            Workout paused
+          </p>
+
+          <div class="next-card" *ngIf="nextExercise">
+            <small>NEXT EXERCISE</small>
+            <strong>{{ nextExercise.name }}</strong>
+            <span>{{ nextExercise.duration }} sec · {{ nextExercise.reps }} reps</span>
+          </div>
+
+          <button
+            class="end-link"
+            type="button"
+            (click)="finishWorkout()"
+          >
+            End workout
+          </button>
+
+        </ng-container>
+
+        <div *ngIf="phase === 'done'" class="completion-panel">
+
+          <p class="kicker">MISSION ACCOMPLISHED</p>
+
+          <h1>Workout<br><span>complete!</span></h1>
+
+          <p>
+            You showed up and put in the work. Be proud of your progress.
+          </p>
+
+          <div class="completion-stats">
+            <div>
+              <strong>{{ completedCount }}</strong>
+              <small>Exercises</small>
+            </div>
+
+            <div>
+              <strong>{{ totalMinutesLabel }}</strong>
+              <small>Planned time</small>
+            </div>
+          </div>
+
+          <button
+            class="primary-button"
+            type="button"
+            (click)="resetWorkout()"
+          >
+            Back to dashboard
+          </button>
+
+        </div>
+
+      </section>
+
+    </ng-container>
+
+    <!-- HISTORY TAB -->
+    <ng-container *ngIf="tab === 'history'">
+
+      <section class="page-heading">
+        <p class="kicker">YOUR PROGRESS</p>
+        <h1>Workout history</h1>
+        <p class="muted">Every session moves you forward.</p>
+      </section>
+
+      <div class="history-summary">
+        <div>
+          <strong>{{ completedWorkouts }}</strong>
+          <small>Sessions</small>
+        </div>
+
+        <div>
+          <strong>{{ totalTrainingMinutes }}</strong>
+          <small>Minutes trained</small>
+        </div>
+      </div>
+
+      <div class="empty-state history-empty" *ngIf="!history.length">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <strong>No sessions yet</strong>
+        <span>Complete a workout and it will appear here.</span>
+      </div>
+
+      <article class="history-row" *ngFor="let item of history">
+
+        <div class="history-copy">
+          <strong>{{ item.workoutName }}</strong>
+          <small>{{ item.date | date:'medium' }}</small>
+          <span>{{ item.exerciseCount }} exercises · {{ item.durationMinutes }} min</span>
+        </div>
+
+      </article>
+
+    </ng-container>
+
+  </main>
+</div>
+
+<!-- EXERCISE EDITOR POP-UP -->
+<div
+  class="editor-backdrop"
+  *ngIf="addFormOpen && tab === 'home'"
+  (click)="cancelExerciseForm()"
+</div>
+
+
+<section
+  class="add-form editor-popup"
+  id="exercise-editor"
+  *ngIf="addFormOpen && tab === 'home'"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Exercise editor"
+
+  <div class="form-heading">
+    <strong>
+      {{ editingExerciseId === null ? 'Add an exercise' : 'Edit exercise' }}
+    </strong>
+
+    <button
+      class="icon-button"
+      type="button"
+      (click)="cancelExerciseForm()"
+      aria-label="Close exercise form"
+    >
+      <ion-icon name="close"></ion-icon>
+    </button>
+  </div>
+
+  <label>
+    Exercise name
+    <input
+      type="text"
+      [(ngModel)]="draftName"
+      placeholder="e.g. Mountain climbers"
+      maxlength="60"
+    >
+  </label>
+
+  <div class="form-columns">
+    <label>
+      Duration (seconds)
+      <input
+        type="number"
+        min="1"
+        max="3600"
+        [(ngModel)]="draftDuration"
+        placeholder="e.g. 30"
+        inputmode="numeric"
+      >
+    </label>
+
+    <label>
+      Repetitions
+      <input
+        type="number"
+        min="1"
+        max="999"
+        [(ngModel)]="draftReps"
+        placeholder="e.g. 15"
+        inputmode="numeric"
+      >
+    </label>
+  </div>
+
+  <label>
+    Sets
+    <input
+      type="number"
+      min="1"
+      max="99"
+      [(ngModel)]="draftSets"
+      placeholder="e.g. 3"
+      inputmode="numeric"
+    >
+  </label>
+
+  <label>
+    Category
+    <select [(ngModel)]="draftCategory">
+      <option>Strength</option>
+      <option>Cardio</option>
+      <option>Core</option>
+      <option>Flexibility</option>
+    </select>
+  </label>
+
+  <div class="form-actions">
+    <button
+      class="secondary-button"
+      type="button"
+      (click)="cancelExerciseForm()"
+    >
+      Cancel
+    </button>
+
+    <button
+      class="primary-button"
+      type="button"
+      (click)="addExercise()"
+    >
+      {{ editingExerciseId === null ? 'Add exercise' : 'Save changes' }}
+    </button>
+  </div>
+</section>
+
+<!-- FIXED BOTTOM NAVIGATION -->
+<nav class="bottom-nav" aria-label="Main navigation">
+
+  <button
+    type="button"
+    [class.active]="tab === 'home'"
+    (click)="selectTab('home')"
+  >
+    <ion-icon name="barbell-outline"></ion-icon>
+    <span>Workout</span>
+  </button>
+
+  <button
+    type="button"
+    [class.active]="tab === 'timer'"
+    (click)="selectTab('timer')"
+  >
+    <ion-icon name="timer-outline"></ion-icon>
+    <span>Start</span>
+  </button>
+
+  <button
+    type="button"
+    [class.active]="tab === 'history'"
+    (click)="selectTab('history')"
+  >
+    <ion-icon name="stats-chart-outline"></ion-icon>
+    <span>History</span>
+  </button>
+
+</nav>
